@@ -3,6 +3,7 @@ package utils;
 import entity.ArrayDemo;
 import entity.CostItem;
 import entity.SkillSoulSetting;
+import entity.UnitValue;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -10,8 +11,7 @@ import org.apache.poi.ss.usermodel.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class ExcelReadUtils<T> {
@@ -36,7 +36,7 @@ public class ExcelReadUtils<T> {
     /**
      * 读取Excel文件内容
      */
-    public void readExcel(String fileName) throws IOException, InvalidFormatException, IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException {
+    public void readExcel(String fileName) throws IOException, InvalidFormatException, IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException {
         StringBuilder sb = new StringBuilder();
         Workbook wb = getWorkBook(fileName);
         if (wb==null){
@@ -53,7 +53,7 @@ public class ExcelReadUtils<T> {
         }
     }
 
-    public String readSheet(Sheet sheet,int flag) throws IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException {
+    public String readSheet(Sheet sheet,int flag) throws IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException {
         Row row = null;
         Cell cell = null;
         StringBuilder sb = new StringBuilder();
@@ -142,7 +142,7 @@ public class ExcelReadUtils<T> {
         return fileName.substring(index+1,fileName.length());
     }
 
-    public T changeTo(Row row) throws IllegalAccessException, InstantiationException, NoSuchFieldException, ClassNotFoundException {
+    public T changeTo(Row row) throws IllegalAccessException, InstantiationException, NoSuchFieldException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException {
         T t = kind.newInstance();
         Cell cell = null;
         int colNum = filedName.size();
@@ -155,7 +155,7 @@ public class ExcelReadUtils<T> {
         return t;
     }
 
-    public T typeConversion(T t,Cell cell,int index) throws IllegalAccessException, InstantiationException, NoSuchFieldException, ClassNotFoundException {
+    public T typeConversion(T t,Cell cell,int index) throws IllegalAccessException, InstantiationException, NoSuchFieldException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException {
         Field field = null;
         cell.setCellType(CellType.STRING);
         String str = cell.getStringCellValue();
@@ -163,7 +163,6 @@ public class ExcelReadUtils<T> {
         field.setAccessible(true);
         Type type = field.getGenericType();
         String temp = type.toString();
-        System.out.println(temp);
         if (temp.endsWith(STRING)){
             field.set(t,str);
         }else if (temp.endsWith(INTEGER)){
@@ -175,7 +174,6 @@ public class ExcelReadUtils<T> {
 
         }else if (temp.endsWith(ARRAY)){
             String strArray[];
-            CostItem[] costItems;
             if (str.length()>0){
                 String s[] = temp.split(" ");
                 int length = s.length;
@@ -183,29 +181,30 @@ public class ExcelReadUtils<T> {
                 Class c = Class.forName(name);
                 JSONArray array = JSONArray.fromObject(str);
                 int size = array.size();
-                costItems = new CostItem[size];
+                Object instance = Array.newInstance(c, size);
                 for (int i = 0 ;i<size;i++){
                     JSONObject obj = array.getJSONObject(i);
-                    costItems[i] = (CostItem) JSONObject.toBean(obj,c);
+                    Array.set(instance,i,JSONObject.toBean(obj,c));
                 }
-                field.set(t,costItems);
+                field.set(t,instance);
             }
 
         }else if (temp.startsWith("java.util.Map")){
             if (temp.indexOf(">")==-1){
                 Map map = JSONObject.fromObject(str);
-                System.out.println(map);
+                field.set(t,map);;
             }else {
                 if (str!=null && !"".equals(str)){
-                    System.out.println(str);
-                    Map map = JSONObject.fromObject(str);
-                    System.out.println(map);
+                    Map m = JSONObject.fromObject(str);
                     String[] s = temp.substring(14,temp.length()-1).split(",");
-                    for (String ss : s){
-                        Class<?> name = Class.forName(ss);
-                        Object[] objects = name.getEnumConstants();
-                        
+                    Class<?> name = Class.forName(s[0]);
+                    Method method = name.getMethod("values");
+                    Object[] obj = (Object[]) method.invoke(null);
+                    Map map = new HashMap();
+                    for (Object o : obj){
+                        map.put(o,m.get(o.toString()));
                     }
+                    field.set(t,map);
                 }
 
             }
@@ -214,12 +213,13 @@ public class ExcelReadUtils<T> {
     }
 
 
-    public static void main(String[] args) throws IOException, InvalidFormatException, IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException {
+    public static void main(String[] args) throws IOException, InvalidFormatException, IllegalAccessException, NoSuchFieldException, InstantiationException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException {
         ExcelReadUtils utils = new ExcelReadUtils(SkillSoulSetting.class);
         utils.readExcel("D:/JetBrains/IDEAWorkSpace/LearningDemo/Reflection/src/main/resources/SkillSoulSetting.xlsx");
         for(int i=0;i<utils.list.size();i++){
             System.out.println(utils.list.get(i));
         }
+
 //        ArrayDemo demo = new ArrayDemo();
 //        Field field = demo.getClass().getDeclaredField("unitValue");
 //        System.out.println(field.getGenericType());
