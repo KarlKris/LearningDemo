@@ -15,6 +15,7 @@ import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 
 /**
  * @describe: 处理读写请求
@@ -23,8 +24,14 @@ import java.util.Set;
  **/
 public class EventHandler implements Runnable{
 
-    private static final String WELCOME = "欢迎连接系统";
-    private static final int BUF_SIZE = 1024;
+    private static final int BUF_SIZE = 2048;
+
+    int count = Runtime.getRuntime().availableProcessors();
+    /**
+     * 线程池
+     */
+    private ThreadPoolExecutor executor = new ThreadPoolExecutor(count,count*2,0,
+            TimeUnit.SECONDS,new ArrayBlockingQueue<>(1024),new ThreadPoolExecutor.DiscardOldestPolicy());
 
     private Charset charset =Charset.forName("UTF-8");
 
@@ -73,7 +80,7 @@ public class EventHandler implements Runnable{
         }
         System.out.println();
         //转换监听事件
-        selectionKey.interestOps(SelectionKey.OP_WRITE);
+        //selectionKey.interestOps(SelectionKey.OP_WRITE);
     }
 
     /**
@@ -129,7 +136,7 @@ public class EventHandler implements Runnable{
                 while(it.hasNext()){
                     sc = it.next().getValue();
                     while (writeBuffer.hasRemaining()){
-                        sc.write(writeBuffer.asReadOnlyBuffer());
+                        sc.write(writeBuffer);
                     }
                     writeBuffer.compact();
                 }
@@ -164,15 +171,23 @@ public class EventHandler implements Runnable{
 
     @Override
     public void run() {
-        System.out.println(Thread.currentThread()+"运行读写线程");
-        try{
-            if (selectionKey.isReadable() && selectionKey.isValid()){
-                read();
-            }else if (selectionKey.isWritable() || selectionKey.isValid()){
-                write();
-            }
-        }catch (IOException e){
-            e.printStackTrace();
+        System.out.println(Thread.currentThread().getName()+"运行读写线程");
+        if (selectionKey.isReadable() && selectionKey.isValid()) {
+            executor.submit(() -> {
+                try {
+                    read();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        } else if (selectionKey.isWritable() || selectionKey.isValid()) {
+            executor.submit(() -> {
+                try {
+                    write();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
         }
     }
 }

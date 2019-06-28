@@ -67,16 +67,20 @@ public class NIOClient {
     public String getTargetClient(){
         String res = null;
         int length = list.size();
+        System.out.println("list.size() - > "+length);
         Random random = new Random();
         int index= random.nextInt(length);
+        System.out.println("randomNum - > "+index);
         Iterator<String> it = list.iterator();
         int i = 1;
         while (it.hasNext()){
-            if (i==index){
+            if (i==2){
                 String str = it.next();
+                System.out.println("targetClientName - > "+str);
                 res = name.equals(str) ?  "ALL" : str;
                 break;
             }
+            it.next();
             i++;
         }
         return res==null ? "ALL" : res;
@@ -96,7 +100,7 @@ public class NIOClient {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         NIOClient client = new NIOClient();
-        TimeUnit.SECONDS.sleep(5);
+        TimeUnit.SECONDS.sleep(3);
         System.out.println("-------------------------------------------------------");
         client.send("holle , I am one of the client, my name is "+client.getName());
     }

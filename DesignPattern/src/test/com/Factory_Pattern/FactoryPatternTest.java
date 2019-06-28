@@ -1,9 +1,13 @@
 package com.Factory_Pattern;
 
-import Factory_Pattern.Entity.Car;
-import Factory_Pattern.BenzFactory;
-import Factory_Pattern.CarFactory;
+import factory.Entity.Car;
+import factory.BenzFactory;
+import factory.CarFactory;
 
+/**
+ * 工厂模式：封装对象的创建，不同对象拥有不同的创建工厂。
+ *          将对象的创建和使用分离。
+ */
 public class FactoryPatternTest {
 
     public static void main(String[] args) {

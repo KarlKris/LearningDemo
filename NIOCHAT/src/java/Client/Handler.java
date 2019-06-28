@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  **/
 public class Handler implements Runnable{
 
-    private static final int BUF_SIZE = 1024;
+    private static final int BUF_SIZE = 2048;
 
     private final NIOClient client;
 
@@ -113,7 +113,7 @@ public class Handler implements Runnable{
         CharBuffer buf = null;
         decoder = charset.newDecoder();
 
-        buf = decoder.decode(readBuf.asReadOnlyBuffer());
+        buf = decoder.decode(readBuf);
 
         return buf.toString();
     }
@@ -123,7 +123,6 @@ public class Handler implements Runnable{
         while (true){
             try {
                 int select = selector.select();
-                System.out.println("select - > "+select);
                 if (select>0){
                     Set<SelectionKey> keys = selector.selectedKeys();
                     Iterator<SelectionKey> it = keys.iterator();

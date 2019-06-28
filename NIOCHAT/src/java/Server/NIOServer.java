@@ -30,7 +30,7 @@ public class NIOServer implements Runnable{
      **/
     private final Map<String, SocketChannel>  clients = new HashMap<String, SocketChannel>();
 
-    private Selector selector = null;
+    private  Selector selector = null;
     private ServerSocketChannel serverSocketChannel = null;
     private ByteBuffer readBuffer = null;
     private ByteBuffer writeBuffer = null;
@@ -38,6 +38,7 @@ public class NIOServer implements Runnable{
     public NIOServer() throws IOException {
        startUp();
     }
+
 
     public void startUp() throws IOException {
         //初始化Selector和ServerSocketChannel
@@ -51,7 +52,7 @@ public class NIOServer implements Runnable{
         SelectionKey selectionKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
         //当事件来临时会运行Acceptor线程
         selectionKey.attach(new Acceptor(serverSocketChannel,selector,clients));
-        System.out.println(Thread.currentThread()+"服务器启动成功");
+        System.out.println(Thread.currentThread().getName()+"服务器启动成功");
         System.out.println("--------------------------------------------------------------------");
     }
 
@@ -84,10 +85,12 @@ public class NIOServer implements Runnable{
                 Set<SelectionKey> keys = selector.selectedKeys();
                 Iterator it = keys.iterator();
                 while (it.hasNext()){
-                    //分发处理
-                    dispatch((SelectionKey)it.next());
+                    SelectionKey key = (SelectionKey) it.next();
                     //删除
                     it.remove();
+                    key.interestOps(key.interestOps()&(~SelectionKey.OP_READ));
+                    //分发处理
+                    dispatch(key);
                 }
             }
         } catch (IOException e) {
